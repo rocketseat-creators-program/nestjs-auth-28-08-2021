@@ -50,9 +50,9 @@ model User {
   id Int @id @default(autoincrement())
 
   email    String  @unique
-  password String?
+  password String
 
-  name      String?
+  name      String
 }
 
 ```
@@ -191,8 +191,14 @@ export class User implements Prisma.UserUncheckedCreateInput {
 #### `user/create-user.dto.ts`
 
 ```typescript
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { User } from '../entities/user.entity';
+import {
+  IsEmail,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateUserDto extends User {
   @IsNotEmpty()
@@ -200,6 +206,11 @@ export class CreateUserDto extends User {
   email: string;
 
   @IsString()
+  @MinLength(4)
+  @MaxLength(20)
+  @Matches(/((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
+    message: 'password too weak',
+  })
   password: string;
 
   @IsString()
@@ -439,7 +450,7 @@ import { UserService } from '../user/user.service';
 
 // Models
 import { UserFromJwt } from './model/UserFromJwt';
-import { AuthRequest } from '../model/AuthRequest';
+import { AuthRequest } from './model/AuthRequest';
 
 // Decorators
 import { IS_PUBLIC_KEY } from './public.decorator';
@@ -555,10 +566,10 @@ export interface UserToken {
 
 ```typescript
 import { Request } from 'express';
-import { User } from '../../domain/user/entities/user.entity';
+import { User } from '../../user/entities/user.entity';
 
 export interface AuthRequest extends Request {
-    principal: User;
+  principal: User;
 }
 ```
 
@@ -596,24 +607,6 @@ import { SetMetadata } from '@nestjs/common';
 
 export const IS_PUBLIC_KEY = 'isPublic';
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
-```
-
-#### `auth/auth-user.decorator.ts`
-
-```typescript
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { User } from '@prisma/client';
-import { AuthRequest } from '../../auth/model/AuthRequest';
-
-export const AuthUser = createParamDecorator(
-  (data: keyof User, context: ExecutionContext) => {
-    const request = context.switchToHttp().getRequest<AuthRequest>();
-
-    const user: User = request.body;
-
-    return data ? user && user[data] : user;
-  },
-);
 ```
 
 ### Tratamento de erros: diretório `errors`
